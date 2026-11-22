@@ -1,0 +1,79 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "kimama-pet",
+  "post": {
+    "dir": "dist/client",
+    "entrypoints": {
+      "default": {
+        "inline": true,
+        "entry": "splash.html",
+        "height": "regular"
+      },
+      "game": {
+        "entry": "index.html"
+      },
+      "pet": {
+        "entry": "pet.html"
+      },
+      "petSplash": {
+        "entry": "pet-splash.html",
+        "inline": true,
+        "height": "regular"
+      }
+    }
+  },
+  "server": {
+    "dir": "dist/server",
+    "entry": "index.cjs"
+  },
+  "permissions": {
+    "redis": true,
+    "journeys": true,
+    "reddit": {
+      "enable": true,
+      "asUser": [
+        "SUBMIT_COMMENT",
+        "SUBSCRIBE_TO_SUBREDDIT"
+      ]
+    },
+    "media": true
+  },
+  "menu": {
+    "items": [
+      {
+        "label": "Create today’s Kimama post",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/pet-post"
+      },
+      {
+        "label": "Kimama: send a test call to me",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/test-call"
+      }
+    ]
+  },
+  "scheduler": {
+    "tasks": {
+      "daily-pet": {
+        "endpoint": "/internal/pet-post",
+        "cron": "0 0 * * *"
+      },
+      "daily-nudge": {
+        "endpoint": "/internal/nudge",
+        "cron": "0 * * * *"
+      }
+    }
+  },
+  "triggers": {
+    "onAppInstall": "/internal/pet-post"
+  },
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build"
+  },
+  "marketingAssets": {
+    "icon": "brand/kimama-icon-1024.png"
+  }
+}

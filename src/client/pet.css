@@ -1,0 +1,47 @@
+/* The shell is plastic; the screen is glass. Nothing on the glass is styled here — it is all dots. */
+:root{--ink:#22301f;--paper:#a9b790;--gap:#b9c6a2;--shell:#d9694f;--shell-dark:#b24f3a;--shell-light:#ee8a70;--cream:#f1e6c8;--label:#5c2418;color-scheme:light}
+*{box-sizing:border-box}
+html,body,#root{height:100%;margin:0}
+body{background:#efe9dc;font-family:ui-rounded,"Hiragino Maru Gothic ProN","Arial Rounded MT Bold",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+.pocket-page{min-height:100%;display:grid;place-items:center;padding:8px}
+.device{width:min(100%,348px);max-height:calc(100dvh - 16px);padding:14px 18px 16px;border-radius:44px 44px 120px 120px/44px 44px 96px 96px;background:linear-gradient(160deg,var(--shell-light),var(--shell) 38%,var(--shell-dark));box-shadow:inset 0 2px 0 #ffffff55,inset 0 -6px 0 #00000022,0 14px 0 -4px color-mix(in srgb,var(--shell-dark) 78%,#000),0 22px 30px #0003;display:flex;flex-direction:column;gap:10px;user-select:none}
+.device-top{display:flex;justify-content:space-between;align-items:center;padding:0 6px;color:var(--label)}
+.brand{font-weight:800;font-size:13px;letter-spacing:.22em;text-transform:uppercase;text-shadow:0 1px 0 #ffffff40}
+/* Two slide switches set into the case, labelled the way a case is: small, spaced capitals. */
+.sound{appearance:none;border:0;background:none;color:var(--label);font:800 9px/1 inherit;letter-spacing:.16em;text-transform:uppercase;padding:6px 4px;min-height:32px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;text-shadow:0 1px 0 #ffffff40}
+.sw{display:block;position:relative;width:24px;height:12px;border-radius:7px;background:var(--shell-dark);box-shadow:inset 0 1px 3px #0000008c,0 1px 0 #ffffff55}
+.sw::after{content:'';position:absolute;top:2px;left:2px;width:8px;height:8px;border-radius:50%;background:linear-gradient(#fffdf2,#d8ceb2);box-shadow:0 1px 1px #00000080;transition:left .12s}
+.sw.on::after{left:14px}
+@media (prefers-reduced-motion:reduce){.sw::after{transition:none}}
+.bezel{position:relative;padding:14px 14px 22px;border-radius:18px 18px 34px 18px;background:#3b3f3a;box-shadow:inset 0 3px 8px #000a,0 1px 0 #ffffff50}
+.bezel-note{position:absolute;left:16px;bottom:6px;color:#aeb4a6;font:700 7px/1 ui-monospace,monospace;letter-spacing:.24em}
+.matrix{display:block;width:100%;aspect-ratio:1;background:var(--paper);box-shadow:inset 0 0 0 1px #00000030,inset 3px 3px 8px #0000002e;image-rendering:pixelated;transition:filter .6s steps(3)}
+.matrix.night{filter:brightness(.62) contrast(1.05)}
+.hardware{display:flex;justify-content:center;gap:26px;padding-top:2px}
+.hardware>div{display:grid;justify-items:center;gap:5px}
+.hardware>div:nth-child(2){margin-top:12px}
+.hardware button{appearance:none;width:56px;height:56px;border-radius:50%;border:0;background:radial-gradient(circle at 35% 30%,#fffaea,var(--cream) 55%,#cdbf98);color:#6b5a3c;font:800 17px/1 inherit;box-shadow:0 5px 0 #8a7c58,0 7px 6px #0005,inset 0 -2px 0 #0000001a;cursor:pointer;touch-action:manipulation}
+.hardware button:active{transform:translateY(4px);box-shadow:0 1px 0 #8a7c58,0 2px 3px #0005}
+.hardware button:disabled{opacity:.85}
+.hardware button:focus-visible,.sound:focus-visible,.pet-launch button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.hardware span{min-height:11px;color:var(--label);font:800 10px/1 inherit;letter-spacing:.16em}
+.speaker{display:flex;justify-content:center;gap:5px;transform:rotate(-18deg);margin:2px 0 0 150px;width:60px}
+.speaker i{width:4px;height:16px;border-radius:2px;background:#00000030;box-shadow:inset 0 1px 0 #0003}
+.pet-launch{height:100%;display:flex;align-items:center;justify-content:center;gap:14px;padding:10px;cursor:pointer;user-select:none;background:linear-gradient(160deg,var(--shell-light),var(--shell) 45%,var(--shell-dark));box-shadow:inset 0 3px 0 #ffffff55,inset 0 -8px 0 #00000022}
+.pet-launch .bezel{height:min(94%,440px,calc(100vw - 136px));aspect-ratio:1;padding:10px 10px 16px;border-radius:14px 14px 28px 14px}
+.launch-side{width:104px;display:grid;justify-items:center;gap:9px;color:var(--label);text-align:center}
+.launch-side .brand{font-size:12px;line-height:1.5}
+.launch-side .about{display:grid;justify-items:center;gap:5px}
+.launch-side small{font:600 8.5px/1.2 inherit;letter-spacing:.02em;opacity:.65;white-space:nowrap}
+.launch-side p{margin:0;font:600 11px/1.35 inherit;opacity:.8}
+.launch-side .go{font:800 11px/1 inherit;letter-spacing:.2em;text-transform:uppercase}
+.launch-side .speaker{margin:2px 0 0;width:auto;transform:rotate(-20deg)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;margin:0}
+.pet-launch .matrix{height:100%;width:auto}
+.pet-launch button{appearance:none;width:60px;height:60px;border-radius:50%;border:0;background:radial-gradient(circle at 35% 30%,#fffaea,var(--cream) 55%,#cdbf98);color:#6b5a3c;font:800 20px/1 inherit;box-shadow:0 5px 0 #8a7c58,0 9px 9px #0004;cursor:pointer}
+.pet-launch button:active{transform:translateY(3px);box-shadow:0 2px 0 #8a7c58,0 4px 5px #0004}
+@media (max-width:460px) and (min-aspect-ratio:1/1){.launch-side p{display:none}.launch-side{width:84px}}
+/* On a phone the feed gives a tall card: the screen takes the width and the controls sit beneath it, as on the device. */
+@media (max-aspect-ratio:1/1){.pet-launch{flex-direction:column;gap:12px}.pet-launch .bezel{height:auto;width:min(calc(100vw - 24px),calc(100vh - 112px),440px)}.pet-launch .matrix{width:100%;height:auto}.launch-side{width:min(calc(100vw - 48px),392px);display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left}.launch-side .about{justify-items:start;gap:2px;flex:1}.launch-side p{display:block;font-size:10px}.launch-side small{font-size:9px}.launch-side .brand br{display:none}.launch-side .brand{font-size:13px}.launch-side .go{text-align:right}.launch-side .speaker{display:none}}
+@media (max-height:600px){.device{padding-top:8px;gap:6px}.hardware button{width:48px;height:48px}}
+@media (prefers-reduced-motion:reduce){.matrix{transition:none}.hardware button:active{transform:none}}

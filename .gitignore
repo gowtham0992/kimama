@@ -1,0 +1,16 @@
+# Dependencies and builds
+node_modules/
+dist/
+*.log
+.DS_Store
+
+# Local state and secrets
+.env*
+.local/
+.backup/
+
+# Working notes, playtest reports and launch drafts: not part of the game
+output/
+DEPLOYMENT.md
+docs/*
+!docs/img/

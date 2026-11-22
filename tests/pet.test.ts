@@ -1,0 +1,16 @@
+import{expect,it}from'vitest';
+import{newPet,careForPet,petView,advancePet}from'../src/shared/pet';
+const t=Date.UTC(2026,10,13,12);
+it('hatches once and preserves the same creature',()=>{let p=newPet(t);expect(petView(p,t).stage).toBe('egg');p=careForPet(p,{action:'hatch',version:0},t);expect(petView(p,t).stage).toBe('baby');expect(()=>careForPet(p,{action:'hatch',version:1},t)).toThrow();});
+it('applies different meal/play effects and rejects stale retries',()=>{let p=careForPet(newPet(t),{action:'hatch',version:0},t);p=careForPet(p,{action:'meal',version:1},t);expect(p.fullness).toBe(90);expect(()=>careForPet(p,{action:'meal',version:1},t)).toThrow(/changed/);const n=careForPet(p,{action:'play',version:2},t);expect(n.joy).toBeGreaterThan(p.joy);expect(n.energy).toBeLessThan(p.energy);});
+it('uses elapsed server time and sleeping restores energy',()=>{const p=careForPet(newPet(t),{action:'hatch',version:0},t);const sleeping=careForPet(p,{action:'sleep',version:1},t);expect(advancePet(sleeping,t+3600000).energy).toBe(94);expect(advancePet(p,t+3600000).fullness).toBe(62);expect(()=>careForPet(sleeping,{action:'meal',version:2},t)).toThrow(/Wake/i);});
+it('does not kill or irreversibly punish an absent player',()=>{const p=careForPet(newPet(t),{action:'hatch',version:0},t);const n=petView(p,t+365*86400000);expect(n.fullness).toBeGreaterThanOrEqual(15);expect(n.energy).toBeGreaterThanOrEqual(15);expect(n.stage).toBe('baby');});
+it('requires real elapsed time and multiple care days for growth',()=>{let p=careForPet(newPet(t),{action:'hatch',version:0},t);p=careForPet(p,{action:'cuddle',version:1},t+86400000);expect(petView(p,t+86400000).stage).toBe('child');p=careForPet(p,{action:'cuddle',version:2},t+3*86400000);expect(petView(p,t+3*86400000).stage).toBe('grown');});
+it('bounds journals and rate limits repeated care',()=>{let p=careForPet(newPet(t),{action:'hatch',version:0},t);p=careForPet(p,{action:'cuddle',version:1},t);expect(()=>careForPet(p,{action:'cuddle',version:2},t+1)).toThrow(/moment/);for(let i=1;i<20;i++)p=careForPet(p,{action:'cuddle',version:p.version},t+i*86400000);expect(p.journal).toHaveLength(12);});
+it('makes playdates mutual, remembers the meeting, and prevents self visits and repeats',async()=>{
+ const{meetPets}=await import('../src/shared/pet');let a=careForPet(newPet(t),{action:'hatch',version:0},t),b=careForPet(newPet(t+1),{action:'hatch',version:0},t+1);a.temperament='shy';b.temperament='bold';
+ const[x,y]=meetPets(a,b,'a','b',t+1000);expect(x.journal.at(-1)?.text).toBe(y.journal.at(-1)?.text);expect(x.journal.at(-1)?.text).toContain('shy hello');expect(x.version).toBe(2);expect(y.version).toBe(2);expect(()=>meetPets(x,y,'a','b',t+2000)).toThrow(/already/);expect(()=>meetPets(a,a,'a','a',t)).toThrow(/another/);expect(petView(x,t+1000).meetings).toBeUndefined();
+});
+it('gives different personalities distinct daily encounters and limits them to once per day',()=>{
+ let a=careForPet(newPet(t),{action:'hatch',version:0},t),b=structuredClone(a);a.temperament='bold';b.temperament='shy';a=careForPet(a,{action:'explore',version:1},t);b=careForPet(b,{action:'explore',version:1},t);expect(a.scenes![0].beats[1].text).not.toBe(b.scenes![0].beats[1].text);expect(a.scenes![0].object).toBe(b.scenes![0].object);expect(()=>careForPet(a,{action:'explore',version:2},t+1000)).toThrow(/scene/);
+});
