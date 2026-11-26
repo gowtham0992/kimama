@@ -4,7 +4,7 @@ import {OBJECTS,an,type ObjectId,type Choice} from './scenes';
 import {starText} from './review';
 
 export type RecapPet={name:string;stars?:number;line?:string;knows?:number;temperament?:'bold'|'shy'|'gentle';did?:Choice};
-export type RecapInput={object:ObjectId;counts:Record<Choice,number>;total:number;pets:RecapPet[];today:ObjectId};
+export type RecapInput={object:ObjectId;counts:Record<Choice,number>;total:number;pets:RecapPet[];today:ObjectId;chosen?:{votes:number;total:number}};
 /** Null when nobody went out: an empty recap is worse than none. */
 export function recapText(r:RecapInput):string|null {
  const rated=r.pets.filter((p):p is RecapPet&{stars:number;line:string}=>typeof p.stars==='number'&&!!p.line),o=OBJECTS[r.object];
@@ -25,6 +25,8 @@ export function recapText(r:RecapInput):string|null {
  }
  const known=r.pets.filter((p):p is RecapPet&{knows:number}=>typeof p.knows==='number');
  if(known.length>1){const best=known.reduce((a,p)=>p.knows>a.knows?p:a);out.push(`Best-known pet: **${best.name}**. Its human calls it right ${best.knows}% of the time.`);}
- out.push(`Today: ${an(OBJECTS[r.today].name)}. What will yours do, and what will it say about you?`);
+ // Today's find, and who chose it: the pets that went out yesterday each picked one of three things on the way home.
+ const by=r.chosen&&r.chosen.votes>0?`, brought back by ${r.chosen.total===1?'the only pet that chose':`${r.chosen.votes} of ${r.chosen.total} pets`}`:'';
+ out.push(`Today: ${an(OBJECTS[r.today].name)}${by}. What will yours do, and what will it say about you?`);
  return out.join('\n\n');
 }

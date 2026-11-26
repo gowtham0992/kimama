@@ -15,6 +15,8 @@ import { PUZZLE_COUNTS, type Mode } from '../shared/rules';
 import {newPet,careForPet,petView,meetPets,advancePet,type Pet} from '../shared/pet';
 import {pickVisitor,walkerId,addCard,type Walker,type Card} from '../shared/street';
 import {reviewOf,knowsOf} from '../shared/review';
+import {picksOn,pickOn,knowRecentFinds,type FindStore} from './finds';
+import {isObject} from '../shared/finds';
 
 // Local-only durable anonymous sessions. Reddit identity/storage remains a separate adapter.
 const directory = new URL('../../.local/', import.meta.url);
@@ -44,6 +46,28 @@ app.use('/api/*', async (c, next) => {
 const petFile=new URL('pets-v1.json',directory);
 const pets:Record<string,Pet>=existsSync(petFile)?JSON.parse(readFileSync(petFile,'utf8')):{};
 const invitations=new Map<string,{owner:string;expires:number}>();
+// Tomorrow's find, chosen by today's pets: the same rules as on Reddit, kept in a local file.
+const findFile=new URL('finds-v1.json',directory);
+const findData:{kv:Record<string,string>;h:Record<string,Record<string,string>>}=existsSync(findFile)?JSON.parse(readFileSync(findFile,'utf8')):{kv:{},h:{}};
+const saveFinds=()=>{const t=new URL('finds-v1.tmp',directory);writeFileSync(t,JSON.stringify(findData),{mode:0o600});renameSync(t,findFile);};
+const findStore:FindStore={
+ async get(k){return findData.kv[k]??null;},
+ async set(k,v,o){if(o?.nx&&k in findData.kv)return null;findData.kv[k]=v;saveFinds();return 'OK';},
+ async hGetAll(k){return {...(findData.h[k]??{})};},
+ async hSet(k,v){findData.h[k]={...(findData.h[k]??{}),...v};saveFinds();return 1;},
+};
+app.use('/api/*',async(_c,next)=>{try{await knowRecentFinds(findStore,Date.now());}catch{/* the rotation still works */}await next();});
+app.get('/api/pick',async c=>c.json(await picksOn(findStore,new Date().toISOString().slice(0,10),getCookie(c,'picky-pocket-session'))));
+app.post('/api/pick',async c=>{
+ const id=getCookie(c,'picky-pocket-session');if(!id||!pets[id])return c.json({error:'Sign in to Reddit to choose.'},401);
+ const input=await c.req.json().catch(()=>null) as {object?:unknown;version?:unknown}|null,now=Date.now(),day=new Date(now).toISOString().slice(0,10);
+ try{
+  if(!input||!isObject(input.object))throw new Error('Choose one of the things on the path.');
+  if(!(await picksOn(findStore,day,id)).offer.includes(input.object))throw new Error('That is not on today\u2019s path.');
+  const next=careForPet(pets[id],{action:'bring',object:input.object,version:input.version},now);pets[id]=next;persistPetsAndGarden();
+  return c.json({pick:await pickOn(findStore,day,id,input.object),pet:petView(next,now)});
+ }catch(e){return c.json({error:e instanceof Error?e.message:'Could not choose.'},400);}
+});
 app.all('/api/pet',async c=>{
  if(c.req.method!=='GET'&&c.req.method!=='POST')return c.json({error:'Unsupported method.'},405);
  let id=getCookie(c,'picky-pocket-session');if(!id||!pets[id]){id=randomUUID();pets[id]=newPet(Date.now());setCookie(c,'picky-pocket-session',id,{httpOnly:true,sameSite:'Strict',path:'/',maxAge:365*86400});}

@@ -10,6 +10,7 @@ async function call(path:string,body?:unknown){
  let r:Response;try{r=await go();if(r.status>=500)throw new Error('server');}catch{await new Promise(s=>setTimeout(s,700));r=await go();}
  const data=await r.json();if(!r.ok)throw Object.assign(new Error(data.error||'Could not reach your pet.'),{code:data.code});return data;
 }
+export const pickApi=(body?:{object:string;version:number})=>call('/api/pick',body) as Promise<import('../shared/finds').PickView&{pick?:import('../shared/finds').PickView;pet?:View}>;
 export const petApi=(body?:unknown)=>call('/api/pet',body) as Promise<View>;
 export const callsApi=(body?:unknown)=>call('/api/calls',body) as Promise<{on:boolean;available?:boolean;error?:string}>;
 export const joinApi=()=>call('/api/join',{}) as Promise<{ok:boolean}>;

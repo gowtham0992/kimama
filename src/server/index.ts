@@ -14,6 +14,8 @@ import {pickVisitor,walkerId,type Walker} from '../shared/street';
 import {reviewOf,retortsFor,knowsOf,crowdLine,starText} from '../shared/review';
 import {transitionPet,savePlaydate,settlePet} from './pet-state';
 import {tickAutonomy} from '../shared/autonomy';
+import {findOn,picksOn,pickOn,knowRecentFinds,type FindStore} from './finds';
+import {isObject} from '../shared/finds';
 import {recapText,type RecapPet} from '../shared/recap';
 
 const BADGE=false;
@@ -29,6 +31,22 @@ let seenOrigin='';
 app.use('/api/*',async(c,next)=>{c.header('Cache-Control','no-store');
   try{const o=c.req.header('origin')??'';if(o!==seenOrigin&&/^https:\/\/[a-z0-9-]+\.devvit\.net$/.test(o)){seenOrigin=o;await redis.set('picky:origin:v1',o,{expiration:new Date(Date.now()+30*86400000)});}}catch{/* a missing picture is not worth a failed request */}
   await next();});
+// Every request first learns which find yesterday and today were, so the game, the post and the recap agree on it.
+const finds=redis as unknown as FindStore;
+const learnFinds=async(_c:unknown,next:()=>Promise<void>)=>{try{await knowRecentFinds(finds,Date.now());}catch(e){console.error('Finds not loaded',e instanceof Error?e.name:'');}await next();};
+app.use('/api/*',learnFinds);app.use('/internal/*',learnFinds);
+// Today's path: the three things every pet spotted on the way home, and how the vote for tomorrow stands.
+app.get('/api/pick',async c=>{try{return c.json(await picksOn(finds,dayAt(Date.now()),context.userId));}catch{console.error('Pick view failed');return c.json({error:'The path is not ready yet.'},503);}});
+app.post('/api/pick',async c=>{
+  const user=context.userId,now=Date.now();if(!user)return c.json({error:'Sign in to Reddit to choose.'},401);
+  try{
+    const input=await c.req.json().catch(()=>null) as {object?:unknown;version?:unknown}|null;
+    if(!input||!isObject(input.object))return c.json({error:'Choose one of the things on the path.'},400);
+    const view=await picksOn(finds,dayAt(now),user);if(!view.offer.includes(input.object))return c.json({error:'That is not on today\u2019s path.'},400);
+    const pet=await transitionPet(redis,`picky:pet:v1:u:${user}`,{action:'bring',object:input.object,version:input.version},now);
+    return c.json({pick:await pickOn(finds,dayAt(now),user,input.object),pet:petView(pet,now)});
+  }catch(e){if(e instanceof StateConflict)return c.json({error:e.message},409);if(e instanceof Error&&/path|today|pet|find/i.test(e.message))return c.json({error:e.message},400);console.error('Pick failed');return c.json({error:'Could not choose just now. Try again.'},503);}
+});
 function dayIndex(day:string){return ((Math.floor(Date.parse(`${day}T00:00:00Z`)/86400000)-Math.floor(Date.parse('2026-11-13T00:00:00Z')/86400000))%6+6)%6;}
 // Devvit Journeys: one journey per daily find. It starts when the pet goes outside and ends, complete,
 // when the owner has guessed and the pet has acted. Telemetry must never affect play, so every call is guarded.
@@ -197,7 +215,8 @@ async function recap(post:string,now:number){
     if(await redis.set(done+':lease','1',{nx:true,expiration:new Date(now+60000)})!=='OK')return;
     const pets:RecapPet[]=(JSON.parse(await redis.get(`picky:street:v2:${dayAt(y)}:roster`)??'[]') as RecapPet[]).map(({name,stars,line,knows,temperament,did})=>({name,stars,line,knows,temperament,did})),g=await gardenView(redis,'all',null,y);
     // With nobody out yesterday there are no results, but the day still gets its pinned comment: reviews are posted under it.
-    const text=(recapText({object:dailyObject(y),counts:g.counts,total:g.total,pets,today:dailyObject(now)})??`**Today: ${an(OBJECTS[dailyObject(now)].name)}.** What will yours do, and what will it say about you?`)+'\n\nReviews posted from the game appear as replies to this comment.';
+    const chosen=await findOn(finds,dayAt(now)).catch(()=>null),by=chosen&&chosen.votes>0?{votes:chosen.votes,total:chosen.total}:undefined;
+    const text=(recapText({object:dailyObject(y),counts:g.counts,total:g.total,pets,today:dailyObject(now),chosen:by})??`**Today: ${an(OBJECTS[dailyObject(now)].name)}${by?`, brought back by ${by.votes===1&&by.total===1?'the only pet that chose':`${by.votes} of ${by.total} pets`}`:''}.** What will yours do, and what will it say about you?`)+'\n\nReviews posted from the game appear as replies to this comment.';
     const made=await reddit.submitComment({id:post as Parameters<typeof reddit.submitComment>[0]['id'],text});
     await redis.set(done,made.id,{expiration:new Date(now+2*86400000)});
     try{await made.distinguish(true);}catch{console.error('Recap not pinned');}
@@ -217,7 +236,8 @@ async function petPost(){
     if(SHARE_PICTURES)try{const origin=await redis.get('picky:origin:v1');if(origin)picture=(await media.upload({url:`${origin}/share/${dailyObject(now)}.png`,type:'image'})).mediaUrl;else console.error('Share picture skipped: no origin yet');}catch{console.error('Share picture skipped');}
     // If the community has a post flair called "Daily find", the daily post wears it. Moderators make the flair; the app only looks for it.
     let flairId:string|undefined;try{flairId=(await reddit.getPostFlairTemplates(context.subredditName)).find(f=>f.text==='Daily find')?.id;}catch{/* a post without flair is still a post */}
-    const post=await reddit.submitCustomPost({subredditName:context.subredditName,title:`Your pet found ${an(name)}. What will it think of you? · Kimama · ${date}`,entry:'petSplash',postData:{mode:'pet',day},...(flairId?{flairId}:{}),...(picture?{styles:{shareImageUrl:picture}}:{})});
+    const chosen=await findOn(finds,day).catch(()=>null);
+    const post=await reddit.submitCustomPost({subredditName:context.subredditName,title:`${chosen&&chosen.votes>0?`Your pets chose ${an(name)}`:`Your pet found ${an(name)}`}. What will it think of you? · Kimama · ${date}`,entry:'petSplash',postData:{mode:'pet',day},...(flairId?{flairId}:{}),...(picture?{styles:{shareImageUrl:picture}}:{})});
     await redis.set(key,post.id,{expiration:new Date(now+3*86400000)});
     // Today's post takes the top of the community, and yesterday's steps down, so nobody is sent to an old find.
     try{const old=await redis.get(`picky:pet-post:day:v1:${dayAt(now-86400000)}`);if(old)await (await reddit.getPostById(old as Parameters<typeof reddit.getPostById>[0])).unsticky();}catch{console.error('Old post not unpinned');}

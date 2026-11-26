@@ -9,7 +9,7 @@ export type Choice='try'|'gentle'|'watch';
 /** What sort of thing a find is. A pet has a habit with each sort, and that is what an owner learns. */
 export type Kind='moving'|'still'|'wet'|'soft'|'alive'|'noisy';
 export type PetScene={id:string;kind:'daily'|'playdate';at:number;title:string;object:ObjectId;actors:ScenePet[];beats:Beat[];choice?:'try'|'gentle'|'watch';guess?:'try'|'gentle'|'watch';guessed?:boolean;tell?:'try'|'gentle'|'watch';cue?:'try'|'gentle'|'watch';sure?:boolean;habit?:Choice;mind?:Mind;noted?:boolean;was?:number;kept?:boolean;playedAt?:number;streak?:number;view?:string;viewNew?:boolean;awaitingChoice?:boolean;summary?:string;effect?:string;standing?:string;you?:number;alreadyRewarded?:boolean};
-export type SceneState={encounterSceneDay?:string;scenes?:PetScene[];sceneAlbum?:PetScene[];relations?:Record<string,{score:number;visits:number;name:string}>;copiedHabitDay?:string;reads?:{streak:number;best:number;right:number;total:number;lastDay?:string};picks?:('try'|'gentle'|'watch')[];finds?:Partial<Record<ObjectId,'try'|'gentle'|'watch'>>;views?:string[];kinds?:Partial<Record<Kind,Choice[]>>};
+export type SceneState={brought?:{day:string;object:ObjectId};encounterSceneDay?:string;scenes?:PetScene[];sceneAlbum?:PetScene[];relations?:Record<string,{score:number;visits:number;name:string}>;copiedHabitDay?:string;reads?:{streak:number;best:number;right:number;total:number;lastDay?:string};picks?:('try'|'gentle'|'watch')[];finds?:Partial<Record<ObjectId,'try'|'gentle'|'watch'>>;views?:string[];kinds?:Partial<Record<Kind,Choice[]>>};
 export const OBJECTS:Record<ObjectId,{name:string;arrival:string;try:string;gentle:string;watch:string;habit:ActKind}>={
  windmill:{name:'paper windmill',arrival:'A paper windmill catches the breeze. It turns, then stops.',try:'Blow on it',gentle:'Hold it steady',watch:'Wait for wind',habit:'window'},
  leaf:{name:'fallen leaf',arrival:'A curled leaf skitters past. Something is moving without feet.',try:'Chase it',gentle:'Make a soft nest',watch:'Watch it drift',habit:'toy'},
@@ -59,7 +59,14 @@ export const dayAt=(now:number)=>new Date(now).toISOString().slice(0,10);
 // Thirty, five of each sort. The first sixteen keep their slots so the day the cycle grew kept its object (Nov 18, 2026: the kite);
 // the ten new ones are interleaved after it, so no sort comes round two days running.
 export const DAILY:ObjectId[]=['windmill','acorn','leaf','snail','bell','puddle','spool','feather','pebble','mushroom','umbrella','button','boat','dandelion','shell','kite','sock','key','bee','whistle','can','plane','petal','ladybird','musicbox','ice','duck','caterpillar','mitten','bag'];
-export function dailyObject(now:number):ObjectId{return DAILY[((Math.floor(now/86400000)%DAILY.length)+DAILY.length)%DAILY.length];}
+/** The rotation: what turns up when nobody has chosen. Fixed by the date alone. */
+export function rotationObject(now:number):ObjectId{return DAILY[((Math.floor(now/86400000)%DAILY.length)+DAILY.length)%DAILY.length];}
+// The days whose find was chosen by the pets the day before. The server learns them from its store; the game learns them from the server.
+// One find per day for everyone, so this is shared, not per player. Unknown days fall back to the rotation.
+const FINDS=new Map<string,ObjectId>();
+export function knowFinds(f:Record<string,string>|undefined){for(const[d,o] of Object.entries(f??{}))if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&o in OBJECTS)FINDS.set(d,o as ObjectId);}
+export function forgetFinds(){FINDS.clear();}
+export function dailyObject(now:number):ObjectId{return FINDS.get(dayAt(now))??rotationObject(now);}
 function actor(p:Pet,now:number):ScenePet {const age=(now-(p.hatchedAt??now))/3600000;return{mark:Math.floor(p.bornAt/7)%6,name:p.name,stage:age>=72&&p.careDays.length>=3?'grown':age>=18&&p.careDays.length>=2?'child':'baby',temperament:p.temperament,signature:Object.entries(p.habits??{}).filter(([,v])=>v>=3).sort((a,b)=>b[1]-a[1])[0]?.[0]??null,bold:traitsFor(p).bold};}
 const beat=(text:string,pose:string,motion:Beat['motion'],otherPose?:string):Beat=>({text,pose,motion,otherPose,duration:6000});
 function remember(p:Pet,text:string,now:number){p.journal=[...p.journal,{at:now,text}].slice(-12);}
@@ -84,7 +91,9 @@ export function startDaily(p:Pet,now:number):Pet {
  const mind={restless:' It is restless today.',settled:' It is settled today.',torn:' It is in two minds today.'}[read.mind];
  const reaction=stance+sign+mind+note;
  const alreadyRewarded=n.encounterDay===dayAt(now);
- n.encounterDay=dayAt(now);n.encounterSceneDay=n.encounterDay;n.scenes=[{id:`daily:${n.encounterDay}:${n.version}`,kind:'daily',at:now,title:o.name,object,actors:[actor(n,now)],alreadyRewarded,awaitingChoice:true,tell:read.pose,mind:read.mind,beats:[beat(o.arrival,'watch','arrive'),beat(reaction,t.bold< -2?'turn':'window','notice')]}];
+ // Yesterday it picked one of three things on the path. If the street brought that one back, it knows; if not, it remembers what it wanted.
+ const wanted=n.brought?.day===dayAt(now)?n.brought.object:null,chose=!wanted?'':wanted===object?` ${n.name} picked this one yesterday, and the street agreed.`:` ${n.name} wanted the ${OBJECTS[wanted].name}. The street chose this.`;
+ n.encounterDay=dayAt(now);n.encounterSceneDay=n.encounterDay;n.scenes=[{id:`daily:${n.encounterDay}:${n.version}`,kind:'daily',at:now,title:o.name,object,actors:[actor(n,now)],alreadyRewarded,awaitingChoice:true,tell:read.pose,mind:read.mind,beats:[beat(o.arrival+chose,'watch','arrive'),beat(reaction,t.bold< -2?'turn':'window','notice')]}];
  n.version++;return n;
 }
 const outcomes:Record<ObjectId,{try:[string,string];gentle:[string,string];watch:string}>={
@@ -119,7 +128,7 @@ const outcomes:Record<ObjectId,{try:[string,string];gentle:[string,string];watch
  musicbox:{try:['winds it all the way. Three notes become seven.','turns the key one click and listens to one note.'],gentle:['closes the lid so the tune can rest.','sits on the lid, so nobody can let the tune out.'],watch:'waits for the fourth note. It waits a long time.'},
  duck:{try:['squeezes it. It squeaks. It squeezes it again. And again.','touches it. It squeaks. It does not touch it again.'],gentle:['squeaks it softly, once, like a hello.','gives it a bath in the water bowl. It squeaks thanks.'],watch:'stares it down. The duck blinks first. Probably.'},
 };
-const hash=(t:string)=>{let h=2166136261;for(const c of t)h=Math.imul(h^c.charCodeAt(0),16777619)>>>0;return h;};
+export const hash=(t:string)=>{let h=2166136261;for(const c of t)h=Math.imul(h^c.charCodeAt(0),16777619)>>>0;return h;};
 const top=(w:Record<Choice,number>):Choice=>w.try>=w.gentle&&w.try>=w.watch?'try':w.gentle>=w.watch?'gentle':'watch';
 /** How today's care has left it: above zero braver (petted, treated, told yes), below zero wary (told no). */
 export function careMood(p:Pet,now:number):number {const d=p.today?.day===dayAt(now)?p.today:null;if(!d)return 0;return Math.min(9,(d.pets+d.yes+d.snacks)*3)-Math.min(9,d.no*4.5);}

@@ -34,13 +34,13 @@ something people answer.
     <td align="center" width="25%"><img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/guess.png" alt="The guess screen: a pet looks at a tin whistle above three answers" width="100%"></td>
     <td align="center" width="25%"><img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/bet.png" alt="The bet: sure adds two or loses the streak, a hunch adds one and is safe" width="100%"></td>
     <td align="center" width="25%"><img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/verdict.png" alt="The verdict: five stars and the line: Sure, and right. I dislike being this obvious." width="100%"></td>
-    <td align="center" width="25%"><img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/room.png" alt="Home: the pet in its room with the whistle it kept" width="100%"></td>
+    <td align="center" width="25%"><img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/path.png" alt="On the way home: three things on the path, and the question: which comes back tomorrow?" width="100%"></td>
   </tr>
   <tr>
     <td align="center"><b>1. Read it</b><br>What will it do with a tin whistle?</td>
     <td align="center"><b>2. Bet</b><br>Sure, or only a hunch?</td>
     <td align="center"><b>3. Get reviewed</b><br>Stars, and one line about you.</td>
-    <td align="center"><b>4. Go home</b><br>It keeps what it found.</td>
+    <td align="center"><b>4. Choose tomorrow</b><br>The most-picked thing comes back for everyone.</td>
   </tr>
 </table>
 
@@ -59,6 +59,9 @@ It takes about two minutes. There is a new find every day at 00:00 UTC.
    is part of the read.
 5. **Bet your streak.** Then watch what it does.
 6. **Read your review.** Post it to the thread with your reply, or don't.
+7. **Choose tomorrow.** On the way home your pet spots three things. Pick the
+   one it should bring back. Whatever the community picks most is tomorrow's
+   find, for everyone.
 
 ## The read: three signs, nothing hidden
 
@@ -89,8 +92,12 @@ That is the only chance in the game, and it is announced before you bet.
 
 Miss one day and your streak is kept. Miss two and it starts again.
 
-## Made for a thread
+## Made for a community
 
+- **Today's pets choose tomorrow's find.** Every pet spots the same three
+  things on the way home, and every owner picks one. The most-picked comes back
+  at midnight for the whole community. The new post says how many chose it, and
+  your pet remembers whether the street agreed with it.
 - **One object, every pet.** Everyone's pet meets the same thing, so the
   comments compare like with like.
 - **Your review, your reply.** Posting takes two presses. You pick a one-word
@@ -105,6 +112,23 @@ Miss one day and your streak is kept. Miss two and it starts again.
 - **Shared links.** A link from the share sheet opens with the sender's verdict
   on the card, marked "sent to you".
 
+## Tomorrow is chosen today
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/path.png" width="300" alt="The path home: a rubber duck, a feather and a spool, with the feather selected">
+</p>
+
+The three things on the path are never today's sort of thing, never anything
+found in the last two weeks, and always three different sorts. So the choice is
+a real one: a noisy day, a soft day or a moving day. Your notes say which sorts
+your pet has met, so you can steer toward the habit you still need to learn.
+
+The next morning the story says it: "Dango picked this one yesterday, and the
+street agreed." Or: "Hoshi wanted the feather. The street chose this."
+
+A tie goes to whichever was first on the path. If nobody picks, the first on the
+path comes back anyway, so the game never waits on a quiet day.
+
 ## Thirty finds
 
 <p align="center">
@@ -113,7 +137,7 @@ Miss one day and your streak is kept. Miss two and it starts again.
   <img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/src/client/public/share/duck.png" width="32%" alt="A rubber duck">
 </p>
 
-Six sorts of thing, five of each. Every object has its own answers and its own
+Six sorts of thing, five of each, and the community decides the order. Every object has its own answers and its own
 endings, with separate ones for bold and shy pets: 150 outcomes in all. A stamp
 card keeps one square for each find.
 
@@ -146,8 +170,9 @@ If something is costing you a star, the review says what and how to fix it:
 Kimama is built for one community, its own. Installing it creates the first
 daily post, and nothing needs configuring.
 
-- **Every day at 00:00 UTC** the app creates the day's post, pins it, unpins
-  the one before, and pins one comment under it with yesterday's results.
+- **Every day at 00:00 UTC** the app counts yesterday's picks, makes the
+  winner today's find, creates the day's post, pins it, unpins the one before,
+  and pins one comment under it with yesterday's results.
 - **A post flair named "Daily find"**, if the community has one, is put on each
   daily post.
 - **Menu: "Create today's Kimama post."** Makes today's post if it is missing.
@@ -164,8 +189,9 @@ daily post, and nothing needs configuring.
   a spoken description for screen readers.
 - **Nothing is generated while the game runs.** Every sentence, answer and
   review line is fixed in the source.
-- **105 tests** cover the read, the wording of the answers, the streak and the
-  bet, the review rules, line lengths and the daily results.
+- **112 tests** cover the read, the wording of the answers, the streak and the
+  bet, the review rules, line lengths, the daily results and the vote for
+  tomorrow, including the day change.
 
 ```bash
 npm install
@@ -184,7 +210,7 @@ serves the game on your own machine, with pets kept in a local file.
 
 | Path | What is there |
 | --- | --- |
-| `src/shared/` | The pet, the daily read, the answers and endings, the reviews |
+| `src/shared/` | The pet, the daily read, the answers and endings, the reviews, the vote for tomorrow |
 | `src/client/pet.tsx` | The handheld: buttons, screens, sound |
 | `src/client/px.tsx`, `stage.tsx` | The dot-matrix drawing and the room |
 | `src/client/pet-splash.tsx` | The card shown in the feed |

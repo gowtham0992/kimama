@@ -4,9 +4,10 @@ import {requestExpandedMode,getShareData} from '@devvit/web/client';
 import {NAMES} from '../shared/pet';
 import {reviewFromCode} from '../shared/review';
 import type {GardenView} from '../shared/garden';
-import {OBJECTS,dailyObject} from '../shared/scenes';
+import {OBJECTS,knowFinds} from '../shared/scenes';
+import type {PickView} from '../shared/finds';
 import {MAKER} from '../shared/launch';
-import {gardenApi,petApi,streetApi,type View} from './net';
+import {gardenApi,petApi,pickApi,streetApi,type View} from './net';
 import type {StreetView} from '../shared/street';
 import {Lcd,Txt,Creature,Stars,wrap,markOf,INK,type Shape} from './px';
 import {Egg,Room} from './stage';
@@ -20,23 +21,24 @@ function sharedVerdict(){try{const raw=getShareData();if(!raw)return null;const 
   return{name:x.n as string,shape:x.t as Shape,stage:x.g as 'baby'|'child'|'grown',mark:x.m as number,stars:x.s as number,line,who:'sent to you'};}catch{return null;}}
 const SHARED=sharedVerdict();
 function Launch(){
- const[street,setStreet]=useState<StreetView|null>(null),[garden,setGarden]=useState<GardenView|null>(null),[mine,setMine]=useState<View|null>(null),[,tick]=useState(0),clock=useRef({server:0,local:0});
+ const[street,setStreet]=useState<StreetView|null>(null),[garden,setGarden]=useState<GardenView|null>(null),[mine,setMine]=useState<View|null>(null),[,tick]=useState(0),clock=useRef({server:0,local:0}),[path,setPath]=useState<PickView|null>(null);
  useEffect(()=>{let alive=true;
-  const pet=()=>petApi().then(p=>{if(alive){clock.current={server:p.serverTime,local:Date.now()};setMine(p);}}).catch(()=>{}),yard=()=>gardenApi().then(g=>{if(alive)setGarden(g);}).catch(()=>{});
+  const pet=()=>petApi().then(p=>{if(alive){clock.current={server:p.serverTime,local:Date.now()};knowFinds({[p.dailyFind.day]:p.dailyFind.object});setMine(p);}}).catch(()=>{}),yard=()=>gardenApi().then(g=>{if(alive)setGarden(g);}).catch(()=>{});
   const road=()=>streetApi().then(v=>{if(alive)setStreet(v);}).catch(()=>{});
-  void pet();void yard();void road();
-  const a=setInterval(()=>{if(!document.hidden){void yard();void road();}},20000),b=setInterval(()=>{if(!document.hidden)void pet();},5000),c=setInterval(()=>{if(!document.hidden)tick(v=>v+1);},matchMedia('(prefers-reduced-motion: reduce)').matches?500:125);
+  const walk=()=>pickApi().then(v=>{if(alive)setPath(v);}).catch(()=>{});
+  void pet();void yard();void road();void walk();
+  const a=setInterval(()=>{if(!document.hidden){void yard();void road();void walk();}},20000),b=setInterval(()=>{if(!document.hidden)void pet();},5000),c=setInterval(()=>{if(!document.hidden)tick(v=>v+1);},matchMedia('(prefers-reduced-motion: reduce)').matches?500:125);
   return()=>{alive=false;clearInterval(a);clearInterval(b);clearInterval(c);};},[]);
  const t=clock.current.server+Date.now()-clock.current.local,o=garden?OBJECTS[garden.object]:null,keys=['try','gentle','watch'] as const;
  const top=garden&&garden.total>0?keys.reduce((a,k)=>garden.counts[k]>garden.counts[a]?k:a,'try' as (typeof keys)[number]):null;
  const hatched=!!mine&&mine.stage!=='egg',stars=mine?.review?'★'.repeat(mine.review.stars)+'☆'.repeat(5-mine.review.stars):'';
- const status=!mine?'It will review you':!hatched?'It will review you':mine.sleeping?'is asleep':mine.dailyFind.available?'What will it do?':Math.floor(Date.now()/9600)%2?`Next: ${OBJECTS[dailyObject(Date.now()+86400000)].name}`:`rates you ${stars}`;
+ const status=!mine?'It will review you':!hatched?'It will review you':mine.sleeping?'is asleep':mine.dailyFind.available?'What will it do?':Math.floor(Date.now()/9600)%2?(path?.leader?`${OBJECTS[path.leader].name} leads`.slice(0,21):'Tomorrow: pets choose'):`rates you ${stars}`;
  const crowd=garden&&o?(top?`${garden.total} ${garden.total===1?'pet':'pets'} out today`:'Be the first out today'):'',most=top&&o?`Most: ${o[top]}`:'';
  const run=mine?.reads?.lastDay&&Math.round((Date.parse(new Date(t||Date.now()).toISOString().slice(0,10))-Date.parse(mine.reads.lastDay))/86400000)<=2?mine.reads.streak:0,streak=hatched&&run>0?`Your streak: ${run}`:'';
  const turns=[status,...(crowd?[crowd]:[]),...(most?[most]:[]),...(streak?[streak]:[])],line=turns[Math.floor(Date.now()/3200)%turns.length];
  // Half the time the card shows what the game is: a pet's verdict on its human. Other players' pets first, else your own.
  const wall=street?.wall??[],other=wall.length?wall[Math.floor(Date.now()/10000)%wall.length]:null;
- const said=SHARED??(other?{name:other.name,shape:(other.temperament??'gentle') as Shape,stage:other.stage,mark:other.mark,stars:other.stars??3,line:other.line??'',who:'on its human'}:hatched&&mine?{name:mine.name,shape:(mine.temperament??'gentle') as Shape,stage:mine.stage as 'baby'|'child'|'grown',mark:markOf(mine.bornAt),stars:mine.review.stars,line:mine.review.line,who:'on you'}:!mine||!hatched?{name:'For example',shape:'bold' as Shape,stage:'child' as const,mark:0,stars:2,line:'You: hold the shore. Me: launch it. Have we met?',who:'on its human'}:null);
+ const said=SHARED??(other?{name:other.name,shape:(other.temperament??'gentle') as Shape,stage:other.stage,mark:other.mark,stars:other.stars??3,line:other.line??'',who:'on its human'}:hatched&&mine?{name:mine.name,shape:(mine.temperament??'gentle') as Shape,stage:mine.stage as 'baby'|'child'|'grown',mark:markOf(mine.bornAt),stars:mine.review.stars,line:mine.review.line,who:'on you'}:!mine||!hatched?{name:'For example',shape:'bold' as Shape,stage:'child' as const,mark:0,stars:2,line:'You: keep it safe. Me: launch it. Have we met?',who:'on its human'}:null);
  const verdict=!!said&&Math.floor(Date.now()/5000)%2===1,e=Date.now();
  const open=(e:React.MouseEvent)=>{try{requestExpandedMode(e.nativeEvent,'pet');}catch{/* the feed will retry on the next tap */}};
  return <main className="pet-launch" style={SHELLS[shellFor(mine?.bornAt)].vars as React.CSSProperties} onClick={open}>

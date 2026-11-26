@@ -1,9 +1,10 @@
-import {startDaily,chooseDaily,finishScene,playdateScenes,dailyObject,hasDailyScene,dayAt,OBJECTS,type SceneState} from './scenes';
+import {isObject,nextDay} from './finds';
+import {startDaily,chooseDaily,finishScene,playdateScenes,dailyObject,hasDailyScene,dayAt,OBJECTS,type SceneState,type ObjectId} from './scenes';
 import {logDay,reviewOf,type DayLog,type Review} from './review';
 import {intention,respond,traitsFor,tickAutonomy,signatureFor,styleFor,type Autonomy,type Intent} from './autonomy';
-export type PetAction='hatch'|'meal'|'snack'|'play'|'clean'|'sleep'|'wake'|'cuddle'|'explore'|'respond'|'rename'|'ackVisit'|'sceneChoose'|'sceneFinish';
+export type PetAction='bring'|'hatch'|'meal'|'snack'|'play'|'clean'|'sleep'|'wake'|'cuddle'|'explore'|'respond'|'rename'|'ackVisit'|'sceneChoose'|'sceneFinish';
 export type Pet=Autonomy&SceneState&{schema:1;today?:DayLog;temperament?:'bold'|'shy'|'gentle';keepsake?:string;encounterDay?:string;meetings?:Record<string,string>;version:number;bornAt:number;hatchedAt:number|null;updatedAt:number;name:string;fullness:number;joy:number;energy:number;cleanliness:number;bond:number;sleeping:boolean;droppings?:number;dropAt?:number;meals:number;plays:number;careDays:string[];lastActionAt:Partial<Record<PetAction,number>>;journal:{at:number;text:string}[]};
-export type PetView=Pet&{stage:'egg'|'baby'|'child'|'grown';mood:'waiting'|'sleeping'|'hungry'|'tired'|'messy'|'happy'|'content';personality:string;ageHours:number;message:string;intent:Intent|null;pose:string;signature:string|null;serverTime:number;style:'eager'|'cautious'|'gentle';dailyFind:{name:string;available:boolean};review:Review};
+export type PetView=Pet&{stage:'egg'|'baby'|'child'|'grown';mood:'waiting'|'sleeping'|'hungry'|'tired'|'messy'|'happy'|'content';personality:string;ageHours:number;message:string;intent:Intent|null;pose:string;signature:string|null;serverTime:number;style:'eager'|'cautious'|'gentle';dailyFind:{name:string;available:boolean;object:ObjectId;day:string};review:Review};
 const clamp=(v:number)=>Math.min(100,Math.max(15,v));
 /** Curated names: safe to show beside a Reddit username, short enough for the dot matrix. */
 export const NAMES=['Mochi','Pip','Nori','Kiwi','Tofu','Miso','Yuzu','Soba','Udon','Momo','Kuma','Tama','Pochi','Sumi','Goma','Azuki','Ume','Panko','Koma','Bean','Riku','Hoshi','Dango','Fuku'];
@@ -27,17 +28,24 @@ export function petView(p:Pet,now:number):PetView{
  const intent=intention(n,now);const signature=signatureFor(n);
  const recent=n.reaction&&now-n.reaction.at<5000;
  const pose=n.sleeping?'sleep':recent?n.reaction!.pose:intent?.kind??(mood==='hungry'?'bowl':'idle');
- return{...safe,traits:t,stage,mood,personality,ageHours,intent,pose,signature,serverTime:now,style:styleFor(n),dailyFind:{name:OBJECTS[dailyObject(now)].name,available:!hasDailyScene(n,now)},review:reviewOf(n,now),message:recent?n.reaction!.text:intent?.text??messages[mood]};
+ return{...safe,traits:t,stage,mood,personality,ageHours,intent,pose,signature,serverTime:now,style:styleFor(n),dailyFind:{name:OBJECTS[dailyObject(now)].name,available:!hasDailyScene(n,now),object:dailyObject(now),day:dayAt(now)},review:reviewOf(n,now),message:recent?n.reaction!.text:intent?.text??messages[mood]};
 }
 export function careForPet(p:Pet,input:unknown,now:number):Pet{
  if(!input||typeof input!=='object')throw new Error('Invalid care action.');
  const x=input as Record<string,unknown>;
  if(x.action!=='respond'&&x.version!==p.version)throw new Error('Your pet changed. Reopen the screen and try again.');
- const actions:PetAction[]=['hatch','meal','snack','play','clean','sleep','wake','cuddle','explore','respond','rename','ackVisit','sceneChoose','sceneFinish'];
+ const actions:PetAction[]=['bring','hatch','meal','snack','play','clean','sleep','wake','cuddle','explore','respond','rename','ackVisit','sceneChoose','sceneFinish'];
  if(!actions.includes(x.action as PetAction))throw new Error('Choose a care action.');
  const action=x.action as PetAction,n=tickAutonomy(advancePet(p,now),now);
  if(action==='sceneChoose')return chooseDaily(n,x,now);
  if(action==='sceneFinish')return finishScene(n,x,now);
+ // On the way home: which of the three things on the path it wants back tomorrow. Only a pet that went out today has seen the path.
+ // The server checks the thing was on today's path before this is called.
+ if(action==='bring'){
+  if(!isObject(x.object))throw new Error('Choose one of the things on the path.');
+  if(![...(n.scenes??[]),...(n.sceneAlbum??[])].some(s=>s.kind==='daily'&&dayAt(s.at)===dayAt(now)&&s.choice))throw new Error('Go and see today\u2019s find first.');
+  n.brought={day:nextDay(dayAt(now)),object:x.object};n.version++;return n;
+ }
  if(n.scenes?.length)throw new Error('Finish your pet scene before another care action.');
  if(action==='respond'){const r=respond(n,x,now);logDay(r,x.answer==='yes'?'yes':'no',now);return r;}
  if(n.activity){n.lastActivity={...n.activity,answered:true};delete n.activity;}
