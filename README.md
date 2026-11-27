@@ -1,19 +1,10 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/brand/kimama-devpost-1440x960.png" width="720" alt="Kimama: a dot-matrix pet, two stars out of five, and the words: Have we met?">
-</p>
+# Kimama
 
-<h1 align="center">Kimama</h1>
+![Kimama: a dot-matrix pet, two stars out of five, and the words: Have we met?](https://raw.githubusercontent.com/gowtham0992/kimama/main/brand/kimama-devpost-1440x960.png)
 
-<p align="center">
-  <b>A little pet that reviews you.</b><br>
-  A daily game for Reddit, built on Devvit Web.
-</p>
+**A little pet that reviews you.** A daily game for Reddit, built on Devvit Web.
 
-<p align="center">
-  <a href="https://www.reddit.com/r/kimama/"><b>Play in r/kimama</b></a>
-  &nbsp;·&nbsp;
-  <a href="https://developers.reddit.com/apps/kimama-pet">App listing</a>
-</p>
+**[Play in r/kimama](https://www.reddit.com/r/kimama/)** · [App listing](https://developers.reddit.com/apps/kimama-pet) · [Source](https://github.com/gowtham0992/kimama)
 
 ---
 
@@ -29,20 +20,10 @@ something people answer.
 
 ## A day with Kimama
 
-<table>
-  <tr>
-    <td align="center" width="25%"><img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/guess.png" alt="The guess screen: a pet looks at a tin whistle above three answers" width="100%"></td>
-    <td align="center" width="25%"><img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/bet.png" alt="The bet: sure adds two or loses the streak, a hunch adds one and is safe" width="100%"></td>
-    <td align="center" width="25%"><img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/verdict.png" alt="The verdict: five stars and the line: Sure, and right. I dislike being this obvious." width="100%"></td>
-    <td align="center" width="25%"><img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/path.png" alt="On the way home: three things on the path, and the question: which comes back tomorrow?" width="100%"></td>
-  </tr>
-  <tr>
-    <td align="center"><b>1. Read it</b><br>What will it do with a tin whistle?</td>
-    <td align="center"><b>2. Bet</b><br>Sure, or only a hunch?</td>
-    <td align="center"><b>3. Get reviewed</b><br>Stars, and one line about you.</td>
-    <td align="center"><b>4. Choose tomorrow</b><br>The most-picked thing comes back for everyone.</td>
-  </tr>
-</table>
+| 1. Read it | 2. Bet | 3. Get reviewed | 4. Choose tomorrow |
+| :---: | :---: | :---: | :---: |
+| ![The guess screen: a pet looks at a tin whistle above three answers](https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/guess.png) | ![The bet: sure adds two or loses the streak, a hunch adds one and is safe](https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/bet.png) | ![The verdict: five stars and one line](https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/verdict.png) | ![On the way home: three things on the path](https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/path.png) |
+| What will it do with a tin whistle? | Sure, or only a hunch? | Stars, and one line about you. | The most-picked thing comes back for everyone. |
 
 It takes about two minutes. There is a new find every day at 00:00 UTC.
 
@@ -79,9 +60,7 @@ game. A new note is written the first time your pet meets a sort of thing.
 Once it knows you, about one day in five it says "It is in two minds today".
 That is the only chance in the game, and it is announced before you bet.
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/notes.png" width="260" alt="The notes page: one habit written down, five sorts still to meet">
-</p>
+![The notes page: one habit written down, five sorts still to meet](https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/notes.png)
 
 ## The bet
 
@@ -114,9 +93,7 @@ Miss one day and your streak is kept. Miss two and it starts again.
 
 ## Tomorrow is chosen today
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/path.png" width="300" alt="The path home: a rubber duck, a feather and a spool, with the feather selected">
-</p>
+![The path home: a rubber duck, a feather and a spool, with the feather selected](https://raw.githubusercontent.com/gowtham0992/kimama/main/docs/img/path.png)
 
 The three things on the path are never today's sort of thing, never anything
 found in the last two weeks, and always three different sorts. So the choice is
@@ -131,11 +108,9 @@ path comes back anyway, so the game never waits on a quiet day.
 
 ## Thirty finds
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/src/client/public/share/kite.png" width="32%" alt="A lost kite">
-  <img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/src/client/public/share/boat.png" width="32%" alt="A paper boat">
-  <img src="https://raw.githubusercontent.com/gowtham0992/kimama/main/src/client/public/share/duck.png" width="32%" alt="A rubber duck">
-</p>
+![A lost kite](https://raw.githubusercontent.com/gowtham0992/kimama/main/src/client/public/share/kite.png)
+![A paper boat](https://raw.githubusercontent.com/gowtham0992/kimama/main/src/client/public/share/boat.png)
+![A rubber duck](https://raw.githubusercontent.com/gowtham0992/kimama/main/src/client/public/share/duck.png)
 
 Six sorts of thing, five of each, and the community decides the order. Every object has its own answers and its own
 endings, with separate ones for bold and shy pets: 150 outcomes in all. A stamp
