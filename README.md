@@ -4,7 +4,7 @@
 
 **A little pet that reviews you.** A daily game for Reddit, built on Devvit Web.
 
-**[Play in r/kimama](https://www.reddit.com/r/kimama/)** · [App listing](https://developers.reddit.com/apps/kimama-pet) · [Source](https://github.com/gowtham0992/kimama)
+**[Play in r/kimama](https://www.reddit.com/r/kimama/)** · [Watch the one-minute demo](https://youtu.be/-tNzPF-PDsI) · [App listing](https://developers.reddit.com/apps/kimama-pet) · [Source](https://github.com/gowtham0992/kimama)
 
 ---
 
