@@ -6,11 +6,8 @@
     "entrypoints": {
       "default": {
         "inline": true,
-        "entry": "splash.html",
+        "entry": "pet-splash.html",
         "height": "regular"
-      },
-      "game": {
-        "entry": "index.html"
       },
       "pet": {
         "entry": "pet.html"

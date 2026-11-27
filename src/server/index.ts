@@ -4,9 +4,7 @@ import {Hono} from 'hono';
 import {bodyLimit} from 'hono/body-limit';
 import {serve} from '@hono/node-server';
 import {context,createServer,getServerPort,redis,reddit,notifications,media} from '@devvit/web/server';
-import {createGame,view} from './game';
-import {restoreGame,transition,StateConflict} from './redis-state';
-import {resolveSelection} from './selection';
+import {StateConflict} from './redis-state';
 import {newPet,petView,advancePet,type Pet} from '../shared/pet';
 import {tellLine,dayAt,dailyObject,OBJECTS,an,An} from '../shared/scenes';
 import {telemetry} from '@devvit/analytics/server/reddit';
@@ -47,7 +45,6 @@ app.post('/api/pick',async c=>{
     return c.json({pick:await pickOn(finds,dayAt(now),user,input.object),pet:petView(pet,now)});
   }catch(e){if(e instanceof StateConflict)return c.json({error:e.message},409);if(e instanceof Error&&/path|today|pet|find/i.test(e.message))return c.json({error:e.message},400);console.error('Pick failed');return c.json({error:'Could not choose just now. Try again.'},503);}
 });
-function dayIndex(day:string){return ((Math.floor(Date.parse(`${day}T00:00:00Z`)/86400000)-Math.floor(Date.parse('2026-11-13T00:00:00Z')/86400000))%6+6)%6;}
 // Devvit Journeys: one journey per daily find. It starts when the pet goes outside and ends, complete,
 // when the owner has guessed and the pet has acted. Telemetry must never affect play, so every call is guarded.
 async function journey(key:string,input:{action?:unknown;guess?:unknown},pet:Pet,now:number){
@@ -172,38 +169,6 @@ app.post('/api/tell',async c=>{
   return c.json({ok:true,by});
  }catch{console.error('Tell the thread failed');return c.json({error:'Could not post just now. Try again.'},503);}
 });
-app.all('/api/game',async c=>{
-  if(c.req.method!=='GET'&&c.req.method!=='POST')return c.json({error:'Unsupported method.'},405);
-  let selection:ReturnType<typeof resolveSelection>;
-  try{selection=resolveSelection({mode:c.req.query('mode'),puzzle:c.req.query('puzzle'),practice:c.req.query('practice')},context.postData);}catch{return c.json({error:'Unknown craving.'},400);}
-  const {puzzle,mode:effectiveMode,daily,scope}=selection;
-  const guest=c.req.header('x-picky-guest');
-  const identity=context.userId?`u:${context.userId}`:context.loid?`l:${context.loid}`:guest&&/^[a-f0-9-]{36}$/i.test(guest)?`g:${guest}`:null;
-  if(!identity)return c.json({error:'Please sign in to Reddit, or reopen the game to start a guest session.'},401);
-  const key=`picky:v3:${scope}:${identity}`;
-  const base=()=>createGame(puzzle,effectiveMode);
-  try{
-    const game=c.req.method==='POST'?await transition(redis,key,base,await c.req.json()):restoreGame(base(),await redis.get(key));
-    return c.json({...view(game),reddit:true,daily,guest:!context.userId});
-  }catch(e){
-    if(e instanceof StateConflict)return c.json({error:e.message},409);
-    if(e instanceof SyntaxError)return c.json({error:'Invalid request.'},400);
-    if(e instanceof Error&&/snack|trait|action|changed|finished|sentence/i.test(e.message))return c.json({error:e.message},400);
-    console.error('Picky state operation failed');return c.json({error:'Picky couldn’t save that bite. Your previous progress is safe; try again.'},503);
-  }
-});
-async function todayPost(mode:'mixed'|'homesick'='mixed'){
-  if(!context.subredditName)throw new Error('Missing subreddit context');
-  const day=new Date().toISOString().slice(0,10),key=mode==='homesick'?`picky:post:homesick:v1:${day}`:`picky:post:v3:${day}`;
-  const existing=await redis.get(key);if(existing)return existing;
-  const lock=`${key}:creating`,lease=await redis.set(lock,'creating',{nx:true,expiration:new Date(Date.now()+60000)});
-  if(lease!=='OK')throw new Error('Today’s post is already being created. Try again shortly.');
-  try{
-    const again=await redis.get(key);if(again)return again;
-    const post=await reddit.submitCustomPost({subredditName:context.subredditName,title:mode==='homesick'?`Picky · Homesick · ${day} · Find the favourite`:`Picky · ${day} · What’s the craving?`,entry:'default',postData:mode==='homesick'?{schema:4,mode,day,puzzle:dayIndex(day)%3}:{schema:3,day,puzzle:dayIndex(day)}});
-    await redis.set(key,post.id);return post.id;
-  }finally{await redis.del(lock);}
-}
 // One pet post a day, titled with that day's find, so the game arrives in the feed as daily content.
 // The pet itself belongs to the player, not the post: any day's post opens the same pocket.
 const pinKey=(now:number)=>`picky:recap:v2:${dayAt(now)}`;
@@ -312,13 +277,5 @@ app.post('/internal/pet-post',async c=>{
     if(BADGE)try{await notifications.requestShowGameBadge({post:id as Parameters<typeof notifications.requestShowGameBadge>[0]['post']});}catch{console.error('Badge skipped');}
     return c.json({navigateTo:`https://www.reddit.com/comments/${id.replace(/^t3_/,'')}`});}
   catch{console.error('Pet post failed');return c.json({showToast:'Could not create the pet post. Please retry.'},500);}
-});
-app.post('/internal/homesick-post',async c=>{
-  try{const id=await todayPost('homesick');return c.json({navigateTo:`https://www.reddit.com/comments/${id.replace(/^t3_/,'')}`,showToast:'Homesick is ready.'});}
-  catch{console.error('Picky Homesick post failed');return c.json({showToast:'Could not create the Homesick post. Please retry.'},500);}
-});
-app.post('/internal/post',async c=>{
-  try{const id=await todayPost();return c.json({navigateTo:`https://www.reddit.com/comments/${id.replace(/^t3_/,'')}`,showToast:'Today’s craving is ready.'});}
-  catch{console.error('Picky daily post failed');return c.json({showToast:'Could not create today’s craving. Please retry from the subreddit menu.'},500);}
 });
 serve({fetch:app.fetch,createServer,port:getServerPort()});

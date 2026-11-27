@@ -164,7 +164,7 @@ daily post, and nothing needs configuring.
   a spoken description for screen readers.
 - **Nothing is generated while the game runs.** Every sentence, answer and
   review line is fixed in the source.
-- **112 tests** cover the read, the wording of the answers, the streak and the
+- **79 tests** cover the read, the wording of the answers, the streak and the
   bet, the review rules, line lengths, the daily results and the vote for
   tomorrow, including the day change.
 
@@ -192,9 +192,6 @@ serves the game on your own machine, with pets kept in a local file.
 | `src/server/index.ts` | The server: pet state, the daily post, comments, flair |
 | `scripts/` | Draws the brand and share pictures from the game's own sprites |
 | `tests/` | The test suite |
-
-The repository also holds an earlier prototype, a snack-guessing puzzle that
-the pet grew out of. Nothing in the daily post reaches it.
 
 ## How it was made
 

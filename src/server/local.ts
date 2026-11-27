@@ -10,31 +10,15 @@ import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { mkdirSync, readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
 import { createServer as createViteServer } from 'vite';
-import { act, createGame, view, type Game } from './game';
-import { PUZZLE_COUNTS, type Mode } from '../shared/rules';
 import {newPet,careForPet,petView,meetPets,advancePet,type Pet} from '../shared/pet';
 import {pickVisitor,walkerId,addCard,type Walker,type Card} from '../shared/street';
 import {reviewOf,knowsOf} from '../shared/review';
 import {picksOn,pickOn,knowRecentFinds,type FindStore} from './finds';
 import {isObject} from '../shared/finds';
 
-// Local-only durable anonymous sessions. Reddit identity/storage remains a separate adapter.
+// Local pets and votes are kept in files under .local/.
 const directory = new URL('../../.local/', import.meta.url);
-const file = new URL('sessions-v2.json', directory);
 mkdirSync(directory, { recursive: true });
-const sessions = new Map<string, { games: Record<string, Game>; touched: number }>();
-if (existsSync(file)) {
-  const saved = JSON.parse(readFileSync(file, 'utf8'));
-  for (const [id, session] of Object.entries(saved)) {
-    const value = session as { games: Record<string, Game>; touched: number };
-    if (Date.now() - value.touched < 86400000) sessions.set(id, value);
-  }
-}
-function persist() {
-  const temp = new URL('sessions-v2.tmp', directory);
-  writeFileSync(temp, JSON.stringify(Object.fromEntries(sessions)), { mode: 0o600 });
-  renameSync(temp, file);
-}
 const app = new Hono();
 app.use('/api/*', bodyLimit({ maxSize: 2048, onError: c => c.json({ error: 'Request too large.' }, 413) }));
 app.use('/api/*', async (c, next) => {
@@ -122,37 +106,8 @@ app.all('/api/garden',async c=>{
  return c.json(await gardenView(localStore,post,owner,now,own));
  }catch(e){return c.json({error:e instanceof Error?e.message:'The garden could not load.'},400);}
 });
-app.all('/api/game', async c => {
-  const mode = c.req.query('mode') ?? 'mixed';
-  const puzzle = Number(c.req.query('puzzle') ?? 0);
-  if ((mode !== 'mixed' && mode !== 'classic' && mode !== 'homesick') || !Number.isInteger(puzzle) || puzzle < 0 || puzzle >= PUZZLE_COUNTS[mode as Mode]) return c.json({ error: 'Unknown practice craving.' }, 400);
-  if (c.req.method !== 'POST' && c.req.method !== 'GET') return c.json({ error: 'Unsupported method.' }, 405);
-  let id = getCookie(c, 'picky-session-v2');
-  if (!id || !sessions.has(id)) {
-    id = randomUUID(); sessions.set(id, { games: {}, touched: Date.now() });
-    setCookie(c, 'picky-session-v2', id, { httpOnly: true, sameSite: 'Strict', path: '/', maxAge: 86400 });
-  }
-  const session = sessions.get(id)!; session.touched = Date.now();
-  const key = `${mode}:${puzzle}`;
-  if (!session.games[key]) session.games[key] = createGame(puzzle, mode as Mode);
-  const game = session.games[key];
-  if (c.req.method === 'POST') {
-    try {
-      const input = await c.req.json();
-      // Synchronous state transitions + atomic file replacement make retry versioning deterministic.
-      const next = structuredClone(game);
-      act(next, input);
-      session.games[key] = next;
-      try { persist(); } catch (error) { session.games[key] = game; throw error; }
-    } catch (e) {
-      return c.json({ error: e instanceof Error ? e.message : 'Could not save action.', game: view(session.games[key]) }, 400);
-    }
-  } else persist();
-  return c.json(view(session.games[key]));
-});
-setInterval(() => { for (const [id, s] of sessions) if (Date.now() - s.touched > 86400000) sessions.delete(id); persist(); }, 60000).unref();
 const api = serve({ fetch: app.fetch, port: 5174, hostname: '127.0.0.1' });
 const vite = await createViteServer({ server: { middlewareMode: true, hmr: false, proxy: { '/api': 'http://127.0.0.1:5174' } } });
 const web = createServer((req, res) => { vite.middlewares(req, res, () => { res.statusCode = 404; res.end('Not found'); }); });
-web.listen(5173, '127.0.0.1', () => console.log('Picky playtest: http://localhost:5173'));
+web.listen(5173, '127.0.0.1', () => console.log('Kimama, locally: http://localhost:5173/pet.html'));
 for (const event of ['SIGINT', 'SIGTERM'] as const) process.on(event, () => { web.close(); api.close(); void vite.close().then(() => process.exit(0)); });
